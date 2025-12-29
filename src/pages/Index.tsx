@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Settings } from 'lucide-react';
+import { Settings, Users, MapPin, Mic } from 'lucide-react';
 import { StartRideButton } from '@/components/StartRideButton';
 import { HelpButton } from '@/components/HelpButton';
 import { RideStatus } from '@/components/RideStatus';
 import { EmergencyOverlay } from '@/components/EmergencyOverlay';
 import { KavachLogo } from '@/components/KavachLogo';
 import { DemoControls } from '@/components/DemoControls';
+import { EmergencyContactsSheet } from '@/components/EmergencyContactsSheet';
+import { VoiceChat } from '@/components/VoiceChat';
+import { SafetyMap } from '@/components/SafetyMap';
 import { rideMonitor, type RiskEvent } from '@/lib/rideMonitor';
 import { initVoice, speak, vibrateConfirm } from '@/lib/voiceOutput';
 import { 
@@ -27,6 +30,9 @@ const Index = () => {
   const [isEmergencyActive, setIsEmergencyActive] = useState(false);
   const [emergencyEventId, setEmergencyEventId] = useState<string | null>(null);
   const [showDemoControls, setShowDemoControls] = useState(false);
+  const [showContacts, setShowContacts] = useState(false);
+  const [showVoiceChat, setShowVoiceChat] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   
   // Initialize voice system
   useEffect(() => {
@@ -175,13 +181,36 @@ const Index = () => {
       >
         <KavachLogo size="md" animated />
         
-        <button
-          onClick={() => setShowDemoControls(!showDemoControls)}
-          className="p-2 rounded-full hover:bg-secondary transition-colors"
-          aria-label="Settings"
-        >
-          <Settings className="w-5 h-5 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowContacts(true)}
+            className="p-2 rounded-full hover:bg-secondary transition-colors"
+            aria-label="Emergency Contacts"
+          >
+            <Users className="w-5 h-5 text-muted-foreground" />
+          </button>
+          <button
+            onClick={() => setShowMap(true)}
+            className="p-2 rounded-full hover:bg-secondary transition-colors"
+            aria-label="Nearby Places"
+          >
+            <MapPin className="w-5 h-5 text-muted-foreground" />
+          </button>
+          <button
+            onClick={() => setShowVoiceChat(true)}
+            className="p-2 rounded-full hover:bg-secondary transition-colors"
+            aria-label="Talk to Guardian"
+          >
+            <Mic className="w-5 h-5 text-muted-foreground" />
+          </button>
+          <button
+            onClick={() => setShowDemoControls(!showDemoControls)}
+            className="p-2 rounded-full hover:bg-secondary transition-colors"
+            aria-label="Settings"
+          >
+            <Settings className="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
       </motion.header>
       
       {/* Main Content */}
@@ -250,6 +279,24 @@ const Index = () => {
         onTriggerHeat={handleTriggerHeat}
         onTriggerUnsafeZone={handleTriggerUnsafeZone}
         onTriggerEmergency={handleEmergency}
+      />
+      
+      {/* Emergency Contacts Sheet */}
+      <EmergencyContactsSheet
+        isOpen={showContacts}
+        onClose={() => setShowContacts(false)}
+      />
+      
+      {/* Voice Chat */}
+      <VoiceChat
+        isOpen={showVoiceChat}
+        onClose={() => setShowVoiceChat(false)}
+      />
+      
+      {/* Safety Map */}
+      <SafetyMap
+        isOpen={showMap}
+        onClose={() => setShowMap(false)}
       />
     </div>
   );

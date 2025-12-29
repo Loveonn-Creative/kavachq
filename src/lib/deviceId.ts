@@ -52,3 +52,9 @@ export function getUserLanguage(): string {
   const langCode = lang.split('-')[0];
   return supportedLangs[lang] || supportedLangs[langCode] || 'en-IN';
 }
+
+// Get simple language code for AI (hi or en)
+export function getLanguage(): 'hi' | 'en' {
+  const userLang = getUserLanguage();
+  return userLang.startsWith('hi') ? 'hi' : 'en';
+}
