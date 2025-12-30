@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings, Users, MapPin, Mic } from 'lucide-react';
+import { Settings, Users, MapPin, Mic, History } from 'lucide-react';
 import { StartRideButton } from '@/components/StartRideButton';
 import { HelpButton } from '@/components/HelpButton';
 import { RideStatus } from '@/components/RideStatus';
@@ -203,6 +204,13 @@ const Index = () => {
           >
             <Mic className="w-5 h-5 text-muted-foreground" />
           </button>
+          <Link
+            to="/history"
+            className="p-2 rounded-full hover:bg-secondary transition-colors"
+            aria-label="Ride History"
+          >
+            <History className="w-5 h-5 text-muted-foreground" />
+          </Link>
           <button
             onClick={() => setShowDemoControls(!showDemoControls)}
             className="p-2 rounded-full hover:bg-secondary transition-colors"
