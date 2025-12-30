@@ -57,25 +57,41 @@ const DELIVERY_APPS = [
     name: 'Zomato', 
     icon: '🍽️',
     color: 'bg-red-500/10 border-red-500/20',
-    url: 'https://www.zomato.com/delivery-partner'
+    androidPackage: 'com.application.zomato',
+    iosScheme: 'zomato://',
+    iosAppStore: 'https://apps.apple.com/app/zomato/id434613896',
+    playStore: 'https://play.google.com/store/apps/details?id=com.application.zomato',
+    webUrl: 'https://www.zomato.com/delivery-partner'
   },
   { 
     name: 'Swiggy', 
     icon: '🛵',
     color: 'bg-orange-500/10 border-orange-500/20',
-    url: 'https://partner.swiggy.com'
+    androidPackage: 'in.swiggy.android',
+    iosScheme: 'swiggy://',
+    iosAppStore: 'https://apps.apple.com/app/swiggy/id989540920',
+    playStore: 'https://play.google.com/store/apps/details?id=in.swiggy.android',
+    webUrl: 'https://partner.swiggy.com'
   },
   { 
     name: 'Blinkit', 
     icon: '⚡',
     color: 'bg-yellow-500/10 border-yellow-500/20',
-    url: 'https://blinkit.com/rider'
+    androidPackage: 'com.grofers.customerapp',
+    iosScheme: 'blinkit://',
+    iosAppStore: 'https://apps.apple.com/app/blinkit/id1080402498',
+    playStore: 'https://play.google.com/store/apps/details?id=com.grofers.customerapp',
+    webUrl: 'https://blinkit.com/rider'
   },
   { 
     name: 'Zepto', 
     icon: '🚀',
     color: 'bg-purple-500/10 border-purple-500/20',
-    url: 'https://www.zeptonow.com/rider'
+    androidPackage: 'com.zepto.android',
+    iosScheme: 'zepto://',
+    iosAppStore: 'https://apps.apple.com/app/zepto/id1575323645',
+    playStore: 'https://play.google.com/store/apps/details?id=com.zepto.android',
+    webUrl: 'https://www.zeptonow.com/rider'
   },
 ];
 
@@ -139,8 +155,38 @@ export default function Settings() {
     toast.success('Data exported');
   };
 
-  const openDeliveryApp = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
+  const openDeliveryApp = (app: typeof DELIVERY_APPS[0]) => {
+    const isAndroid = /android/i.test(navigator.userAgent);
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    
+    if (isAndroid) {
+      // Try to open Android app via intent, fallback to Play Store
+      const intentUrl = `intent://#Intent;package=${app.androidPackage};scheme=https;end`;
+      const start = Date.now();
+      
+      window.location.href = intentUrl;
+      
+      // If app didn't open after 1.5s, go to Play Store
+      setTimeout(() => {
+        if (Date.now() - start < 2000) {
+          window.open(app.playStore, '_blank', 'noopener,noreferrer');
+        }
+      }, 1500);
+    } else if (isIOS) {
+      // Try iOS deep link, fallback to App Store
+      const start = Date.now();
+      
+      window.location.href = app.iosScheme;
+      
+      setTimeout(() => {
+        if (Date.now() - start < 2000) {
+          window.open(app.iosAppStore, '_blank', 'noopener,noreferrer');
+        }
+      }, 1500);
+    } else {
+      // Desktop - open web portal
+      window.open(app.webUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   return (
@@ -245,7 +291,7 @@ export default function Settings() {
             {DELIVERY_APPS.map(app => (
               <button
                 key={app.name}
-                onClick={() => openDeliveryApp(app.url)}
+                onClick={() => openDeliveryApp(app)}
                 className={`flex items-center gap-3 p-4 rounded-xl border ${app.color} hover:opacity-80 transition-opacity text-left`}
               >
                 <span className="text-2xl">{app.icon}</span>
