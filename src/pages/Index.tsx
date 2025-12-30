@@ -282,7 +282,7 @@ const Index = () => {
       
       {/* Demo Controls */}
       <DemoControls
-        isVisible={showDemoControls && isRideActive}
+        isVisible={showDemoControls}
         onClose={() => setShowDemoControls(false)}
         onTriggerHeat={handleTriggerHeat}
         onTriggerUnsafeZone={handleTriggerUnsafeZone}
