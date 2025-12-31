@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Settings as SettingsIcon } from 'lucide-react';
@@ -11,8 +11,12 @@ import { DemoControls } from '@/components/DemoControls';
 import { EmergencyContactsSheet } from '@/components/EmergencyContactsSheet';
 import { VoiceChat } from '@/components/VoiceChat';
 import { SafetyMap } from '@/components/SafetyMap';
+import { ContextualSafetyActions } from '@/components/ContextualSafetyActions';
 import { rideMonitor, type RiskEvent } from '@/lib/rideMonitor';
+import { fatigueDetector } from '@/lib/fatigueDetection';
+import { calculateRideScore } from '@/lib/safetyCredits';
 import { initVoice, speak, vibrateConfirm } from '@/lib/voiceOutput';
+import { toast } from 'sonner';
 import { 
   startRideSession, 
   endRideSession, 
@@ -35,6 +39,18 @@ const Index = () => {
   const [showVoiceChat, setShowVoiceChat] = useState(false);
   const [showMap, setShowMap] = useState(false);
   
+  // Risk and fatigue tracking
+  const [riskLevel, setRiskLevel] = useState<'none' | 'low' | 'medium' | 'high' | 'critical'>('none');
+  const [fatigueLevel, setFatigueLevel] = useState<'none' | 'mild' | 'moderate' | 'severe'>('none');
+  
+  // Metrics tracking for safety score
+  const metricsRef = useRef({
+    speedViolations: 0,
+    heatExposureMinutes: 0,
+    warningsAcknowledged: 0,
+    totalWarnings: 0,
+  });
+  
   // Initialize voice system
   useEffect(() => {
     initVoice();
@@ -54,17 +70,26 @@ const Index = () => {
     return () => clearInterval(timer);
   }, [isRideActive]);
   
-  // Update location periodically
+  // Update location and fatigue periodically
   useEffect(() => {
     if (!isRideActive) return;
     
-    const updateLocation = () => {
+    const updateStatus = () => {
+      // Update location
       const loc = rideMonitor.getCurrentLocation();
       if (loc) setLocation(loc);
+      
+      // Update fatigue level
+      const newFatigueLevel = fatigueDetector.getFatigueLevel();
+      setFatigueLevel(newFatigueLevel);
+      
+      // Get current speed for fatigue detector
+      const state = rideMonitor.getState();
+      fatigueDetector.updateGPSData(state.lastSpeed);
     };
     
-    const interval = setInterval(updateLocation, 5000);
-    updateLocation();
+    const interval = setInterval(updateStatus, 5000);
+    updateStatus();
     
     return () => clearInterval(interval);
   }, [isRideActive]);
@@ -76,7 +101,26 @@ const Index = () => {
       saveRiskEvent(sessionId, event);
     }
     
-    // Auto-clear after 5 seconds
+    // Update metrics
+    metricsRef.current.totalWarnings++;
+    if (event.type === 'speed_warning') {
+      metricsRef.current.speedViolations++;
+    }
+    if (event.type === 'heat_warning') {
+      metricsRef.current.heatExposureMinutes += 5; // Approximate exposure
+    }
+    
+    // Set risk level based on severity
+    setRiskLevel(event.severity === 'critical' ? 'critical' : 
+                 event.severity === 'high' ? 'high' : 
+                 event.severity === 'medium' ? 'medium' : 'low');
+    
+    // Auto-clear risk level after 30 seconds
+    setTimeout(() => {
+      setRiskLevel('none');
+    }, 30000);
+    
+    // Auto-clear event after 5 seconds
     setTimeout(() => {
       setLastEvent(prev => prev?.timestamp === event.timestamp ? null : prev);
     }, 5000);
@@ -87,6 +131,7 @@ const Index = () => {
     if (isEmergencyActive) return;
     
     setIsEmergencyActive(true);
+    setRiskLevel('critical');
     const loc = rideMonitor.getCurrentLocation();
     
     if (sessionId) {
@@ -102,15 +147,19 @@ const Index = () => {
   // Cancel emergency
   const handleCancelEmergency = useCallback(() => {
     setIsEmergencyActive(false);
+    setRiskLevel('none');
     if (emergencyEventId) {
       resolveEmergency(emergencyEventId, 'false_alarm');
       setEmergencyEventId(null);
     }
+    // Count as acknowledged warning
+    metricsRef.current.warningsAcknowledged++;
   }, [emergencyEventId]);
   
   // Resolve emergency
   const handleResolveEmergency = useCallback(() => {
     setIsEmergencyActive(false);
+    setRiskLevel('none');
     if (emergencyEventId) {
       resolveEmergency(emergencyEventId, 'resolved');
       setEmergencyEventId(null);
@@ -122,6 +171,14 @@ const Index = () => {
     setIsLoading(true);
     vibrateConfirm();
     
+    // Reset metrics
+    metricsRef.current = {
+      speedViolations: 0,
+      heatExposureMinutes: 0,
+      warningsAcknowledged: 0,
+      totalWarnings: 0,
+    };
+    
     try {
       const success = await rideMonitor.startMonitoring();
       
@@ -129,12 +186,17 @@ const Index = () => {
         rideMonitor.setRiskEventHandler(handleRiskEvent);
         rideMonitor.setEmergencyHandler(handleEmergency);
         
+        // Start fatigue detection
+        fatigueDetector.startMonitoring();
+        
         const loc = rideMonitor.getCurrentLocation();
         const newSessionId = await startRideSession(loc || undefined);
         
         setSessionId(newSessionId);
         setIsRideActive(true);
         setLocation(loc);
+        setRiskLevel('none');
+        setFatigueLevel('none');
         
         speak('ride_started');
       }
@@ -150,15 +212,33 @@ const Index = () => {
     vibrateConfirm();
     
     const finalState = rideMonitor.stopMonitoring();
+    const fatigueState = fatigueDetector.stopMonitoring();
+    const fatigueMetrics = fatigueDetector.getMetrics();
     
     if (sessionId) {
       await endRideSession(sessionId, finalState);
+      
+      // Calculate and save safety score
+      const totalMinutes = duration / 60;
+      const rideScore = calculateRideScore(sessionId, {
+        accelerationVariance: fatigueMetrics.accelerationVariance,
+        speedViolations: metricsRef.current.speedViolations,
+        heatExposureMinutes: metricsRef.current.heatExposureMinutes,
+        totalMinutes,
+        warningsAcknowledged: metricsRef.current.warningsAcknowledged,
+        totalWarnings: metricsRef.current.totalWarnings,
+      });
+      
+      // Show score toast
+      toast.success(`Ride Complete! Score: ${rideScore.overallScore} (+${rideScore.creditsEarned} credits)`);
     }
     
     setIsRideActive(false);
     setSessionId(null);
     setLastEvent(null);
     setLocation(null);
+    setRiskLevel('none');
+    setFatigueLevel('none');
     
     speak('ride_ended');
   };
@@ -236,6 +316,16 @@ const Index = () => {
           </motion.p>
         )}
       </main>
+      
+      {/* Contextual Safety Actions - appear based on risk/fatigue */}
+      <ContextualSafetyActions
+        isVisible={isRideActive}
+        riskLevel={riskLevel}
+        fatigueLevel={fatigueLevel}
+        onOpenMap={() => setShowMap(true)}
+        onOpenContacts={() => setShowContacts(true)}
+        onOpenVoice={() => setShowVoiceChat(true)}
+      />
       
       {/* Help Button */}
       <HelpButton 
