@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Settings as SettingsIcon, Users, MapPin, Mic, History } from 'lucide-react';
+import { Settings as SettingsIcon } from 'lucide-react';
 import { StartRideButton } from '@/components/StartRideButton';
 import { HelpButton } from '@/components/HelpButton';
 import { RideStatus } from '@/components/RideStatus';
@@ -182,43 +182,14 @@ const Index = () => {
       >
         <KavachLogo size="md" animated />
         
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowContacts(true)}
-            className="p-2 rounded-full hover:bg-secondary transition-colors"
-            aria-label="Emergency Contacts"
-          >
-            <Users className="w-5 h-5 text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => setShowMap(true)}
-            className="p-2 rounded-full hover:bg-secondary transition-colors"
-            aria-label="Nearby Places"
-          >
-            <MapPin className="w-5 h-5 text-muted-foreground" />
-          </button>
-          <button
-            onClick={() => setShowVoiceChat(true)}
-            className="p-2 rounded-full hover:bg-secondary transition-colors"
-            aria-label="Talk to Guardian"
-          >
-            <Mic className="w-5 h-5 text-muted-foreground" />
-          </button>
-          <Link
-            to="/history"
-            className="p-2 rounded-full hover:bg-secondary transition-colors"
-            aria-label="Ride History"
-          >
-            <History className="w-5 h-5 text-muted-foreground" />
-          </Link>
-          <Link
-            to="/settings"
-            className="p-2 rounded-full hover:bg-secondary transition-colors"
-            aria-label="Settings"
-          >
-            <SettingsIcon className="w-5 h-5 text-muted-foreground" />
-          </Link>
-        </div>
+        {/* Minimal header - only settings access */}
+        <Link
+          to="/settings"
+          className="p-2 rounded-full hover:bg-secondary transition-colors"
+          aria-label="Settings"
+        >
+          <SettingsIcon className="w-5 h-5 text-muted-foreground" />
+        </Link>
       </motion.header>
       
       {/* Main Content */}
