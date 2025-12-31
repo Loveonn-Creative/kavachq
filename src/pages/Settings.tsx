@@ -8,7 +8,9 @@ import {
   Download, 
   ExternalLink,
   ChevronRight,
-  Smartphone
+  Smartphone,
+  History,
+  Shield
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -32,6 +34,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { getLocalRideHistory, cleanupOldData } from '@/lib/offlineStorage';
+import { SafetyCreditsSection } from '@/components/SafetyCreditsSection';
 
 interface AppSettings {
   language: string;
@@ -206,6 +209,45 @@ export default function Settings() {
       </header>
 
       <main className="p-4 space-y-6 pb-8">
+        {/* Safety Credits - Priority 1 */}
+        <SafetyCreditsSection />
+
+        {/* Ride History - Moved from home */}
+        <section className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            <History className="w-4 h-4" />
+            <span>Ride History</span>
+          </div>
+          <Link
+            to="/history"
+            className="flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:bg-muted/50 transition-colors"
+          >
+            <div>
+              <p className="font-medium">View All Rides</p>
+              <p className="text-sm text-muted-foreground">{rideCount} rides recorded</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </Link>
+        </section>
+
+        {/* Admin Analytics Link */}
+        <section className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            <Shield className="w-4 h-4" />
+            <span>Admin</span>
+          </div>
+          <Link
+            to="/admin"
+            className="flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:bg-muted/50 transition-colors"
+          >
+            <div>
+              <p className="font-medium">Analytics Dashboard</p>
+              <p className="text-sm text-muted-foreground">AI pattern detection & insights</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </Link>
+        </section>
+
         {/* Language */}
         <section className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
