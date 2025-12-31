@@ -314,6 +314,10 @@ class RideMonitor {
     };
   }
   
+  getCurrentSpeed(): number {
+    return this.state.lastSpeed;
+  }
+  
   // Simulate heat warning (in production, this would use weather API)
   triggerHeatWarning(): void {
     this.triggerRiskEvent({
