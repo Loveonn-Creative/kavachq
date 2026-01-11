@@ -251,6 +251,26 @@ const Index = () => {
   const handleTriggerUnsafeZone = () => {
     rideMonitor.triggerUnsafeZoneWarning();
   };
+  
+  // Fatigue simulation for testing
+  const handleSimulateFatigue = (level: 'mild' | 'moderate' | 'severe') => {
+    fatigueDetector.simulateFatigue(level);
+    setFatigueLevel(level);
+    toast.info(`Simulating ${level} fatigue`);
+  };
+  
+  const handleSimulatePanic = () => {
+    fatigueDetector.simulatePanic();
+    setRiskLevel('critical');
+    toast.warning('Simulating panic state');
+  };
+  
+  const handleResetFatigue = () => {
+    fatigueDetector.resetSimulation();
+    setFatigueLevel('none');
+    setRiskLevel('none');
+    toast.success('Fatigue state reset');
+  };
 
   return (
     <div className="min-h-screen min-h-dvh bg-background flex flex-col">
@@ -289,11 +309,24 @@ const Index = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
+            onClick={() => setShowDemoControls(true)}
           >
             Your invisible guardian.
             <br />
             <span className="text-sm">Always watching. Never intrusive.</span>
           </motion.p>
+        )}
+        
+        {/* Demo mode hint during ride */}
+        {isRideActive && (
+          <motion.button
+            className="text-xs text-muted-foreground/40 underline"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={() => setShowDemoControls(true)}
+          >
+            Open Demo Controls
+          </motion.button>
         )}
         
         {/* Start/Stop Button */}
@@ -348,6 +381,9 @@ const Index = () => {
         onTriggerHeat={handleTriggerHeat}
         onTriggerUnsafeZone={handleTriggerUnsafeZone}
         onTriggerEmergency={handleEmergency}
+        onSimulateFatigue={handleSimulateFatigue}
+        onSimulatePanic={handleSimulatePanic}
+        onResetFatigue={handleResetFatigue}
       />
       
       {/* Emergency Contacts Sheet */}

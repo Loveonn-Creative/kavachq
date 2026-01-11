@@ -339,6 +339,28 @@ class FatigueDetector {
       fatigueScore: this.state.fatigueScore,
     };
   }
+  
+  // Demo methods for testing fatigue levels
+  simulateFatigue(level: 'mild' | 'moderate' | 'severe'): void {
+    const scores = {
+      mild: 35,
+      moderate: 55,
+      severe: 75,
+    };
+    this.state.fatigueScore = scores[level];
+    this.checkAndNudge();
+  }
+  
+  simulatePanic(): void {
+    this.state.panicScore = 70;
+    this.state.lastNudgeTime = 0; // Reset to trigger immediate nudge
+    this.checkAndNudge();
+  }
+  
+  resetSimulation(): void {
+    this.state.fatigueScore = 0;
+    this.state.panicScore = 0;
+  }
 }
 
 export const fatigueDetector = new FatigueDetector();
