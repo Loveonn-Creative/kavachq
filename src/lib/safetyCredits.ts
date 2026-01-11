@@ -91,6 +91,8 @@ export function calculateRideScore(
     totalMinutes: number;
     warningsAcknowledged: number;
     totalWarnings: number;
+    harshWeatherMinutes?: number; // time riding in challenging weather
+    weatherAlertsHeeded?: number; // weather alerts that led to rest
   }
 ): RideScore {
   // Calculate component scores (0-100, higher is better)
@@ -119,11 +121,20 @@ export function calculateRideScore(
     interventionResponse * 0.25
   );
   
-  // Credits earned (1-10 based on score, plus streak bonus)
+  // Credits earned (1-10 based on score, plus streak and weather bonuses)
   const state = getSafetyCredits();
   const baseCredits = Math.ceil(overallScore / 10);
   const streakBonus = Math.min(state.currentStreak, 5); // max 5 bonus credits
-  const creditsEarned = baseCredits + streakBonus;
+  
+  // Weather bonus: reward for riding safely in harsh conditions
+  const harshWeatherBonus = metrics.harshWeatherMinutes 
+    ? Math.min(5, Math.floor(metrics.harshWeatherMinutes / 10)) // 1 credit per 10 min in harsh weather
+    : 0;
+  const weatherAlertBonus = metrics.weatherAlertsHeeded 
+    ? Math.min(3, metrics.weatherAlertsHeeded) // Up to 3 extra credits for heeding warnings
+    : 0;
+  
+  const creditsEarned = baseCredits + streakBonus + harshWeatherBonus + weatherAlertBonus;
   
   const rideScore: RideScore = {
     id: crypto.randomUUID?.() || Date.now().toString(),

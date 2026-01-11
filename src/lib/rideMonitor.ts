@@ -14,11 +14,18 @@ export interface RideState {
 }
 
 export interface RiskEvent {
-  type: 'speed_warning' | 'heat_warning' | 'unsafe_zone' | 'sudden_stop' | 'fall_detected' | 'long_idle' | 'wellness_check';
+  type: 'speed_warning' | 'heat_warning' | 'unsafe_zone' | 'sudden_stop' | 'fall_detected' | 'long_idle' | 'wellness_check' | 'rain_warning' | 'extreme_weather' | 'high_wind';
   severity: 'low' | 'medium' | 'high' | 'critical';
   timestamp: number;
   location?: { lat: number; lng: number };
   message?: string;
+  weatherData?: {
+    temperature: number;
+    feelsLike: number;
+    humidity: number;
+    windSpeed: number;
+    isRaining: boolean;
+  };
 }
 
 // Thresholds for risk detection
@@ -318,13 +325,47 @@ class RideMonitor {
     return this.state.lastSpeed;
   }
   
-  // Simulate heat warning (in production, this would use weather API)
-  triggerHeatWarning(): void {
+  // Trigger weather-based heat warning with real data
+  triggerHeatWarning(weatherData?: { temperature: number; feelsLike: number; humidity: number; windSpeed: number; isRaining: boolean }): void {
     this.triggerRiskEvent({
       type: 'heat_warning',
+      severity: weatherData?.feelsLike && weatherData.feelsLike >= 45 ? 'critical' : 'high',
+      timestamp: Date.now(),
+      location: this.getCurrentLocation() || undefined,
+      weatherData,
+    });
+  }
+  
+  // Trigger rain warning
+  triggerRainWarning(weatherData?: { temperature: number; feelsLike: number; humidity: number; windSpeed: number; isRaining: boolean }): void {
+    this.triggerRiskEvent({
+      type: 'rain_warning',
+      severity: 'medium',
+      timestamp: Date.now(),
+      location: this.getCurrentLocation() || undefined,
+      weatherData,
+    });
+  }
+  
+  // Trigger high wind warning
+  triggerWindWarning(weatherData?: { temperature: number; feelsLike: number; humidity: number; windSpeed: number; isRaining: boolean }): void {
+    this.triggerRiskEvent({
+      type: 'high_wind',
       severity: 'high',
       timestamp: Date.now(),
       location: this.getCurrentLocation() || undefined,
+      weatherData,
+    });
+  }
+  
+  // Trigger extreme weather (combines multiple factors)
+  triggerExtremeWeather(weatherData?: { temperature: number; feelsLike: number; humidity: number; windSpeed: number; isRaining: boolean }): void {
+    this.triggerRiskEvent({
+      type: 'extreme_weather',
+      severity: 'critical',
+      timestamp: Date.now(),
+      location: this.getCurrentLocation() || undefined,
+      weatherData,
     });
   }
   

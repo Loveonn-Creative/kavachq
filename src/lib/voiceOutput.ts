@@ -18,6 +18,12 @@ const voiceMessages: Record<string, Record<string, string>> = {
     emergency_triggered: 'Emergency activated. Sharing your location.',
     emergency_cancelled: 'Emergency cancelled. Stay safe.',
     help_coming: 'Help is on the way. Stay where you are.',
+    // Weather alerts
+    extreme_heat: 'Extreme heat. Stop immediately. Find shade and water.',
+    rain_warning: 'Rain starting. Slow down. Roads are slippery.',
+    high_wind: 'Strong winds ahead. Hold steady. Stay alert.',
+    hydration_reminder: 'Time to drink water. Stay hydrated.',
+    weather_caution: 'Warm conditions. Take breaks and hydrate.',
   },
   'hi-IN': {
     ride_started: 'राइड शुरू। मैं आपकी निगरानी कर रहा हूं।',
@@ -32,6 +38,12 @@ const voiceMessages: Record<string, Record<string, string>> = {
     emergency_triggered: 'इमरजेंसी चालू। आपकी लोकेशन शेयर कर रहा हूं।',
     emergency_cancelled: 'इमरजेंसी रद्द। सुरक्षित रहें।',
     help_coming: 'मदद आ रही है। वहीं रहें।',
+    // Weather alerts
+    extreme_heat: 'अत्यधिक गर्मी। तुरंत रुकें। छाया और पानी खोजें।',
+    rain_warning: 'बारिश शुरू। धीमा करें। सड़कें फिसलन भरी हैं।',
+    high_wind: 'तेज़ हवाएं। स्थिर रहें। सतर्क रहें।',
+    hydration_reminder: 'पानी पीने का समय। हाइड्रेटेड रहें।',
+    weather_caution: 'गर्म मौसम। ब्रेक लें और पानी पिएं।',
   },
   'ta-IN': {
     ride_started: 'பயணம் தொடங்கியது. நான் உங்களை கவனித்துக்கொள்கிறேன்.',
@@ -46,6 +58,12 @@ const voiceMessages: Record<string, Record<string, string>> = {
     emergency_triggered: 'அவசர நிலை செயல்படுத்தப்பட்டது.',
     emergency_cancelled: 'அவசர நிலை ரத்து.',
     help_coming: 'உதவி வருகிறது.',
+    // Weather alerts
+    extreme_heat: 'கடுமையான வெப்பம். உடனே நிறுத்துங்கள். நிழல் மற்றும் தண்ணீர் கண்டுபிடியுங்கள்.',
+    rain_warning: 'மழை தொடங்குகிறது. வேகம் குறையுங்கள். சாலைகள் வழுக்கும்.',
+    high_wind: 'கடும் காற்று. நிலையாக இருங்கள். விழிப்பாக இருங்கள்.',
+    hydration_reminder: 'தண்ணீர் குடிக்க நேரம். நீரேற்றமாக இருங்கள்.',
+    weather_caution: 'வெப்பமான நிலை. இடைவேளை எடுங்கள்.',
   },
 };
 

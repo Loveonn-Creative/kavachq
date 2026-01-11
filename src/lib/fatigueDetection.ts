@@ -229,8 +229,30 @@ class FatigueDetector {
     }
   }
   
-  updateTemperature(temp: number): void {
-    this.state.ambientTemp = temp;
+  updateTemperature(temp: number, humidity?: number): void {
+    // Use feels-like temperature if humidity is provided
+    if (humidity !== undefined && temp >= 27) {
+      // Calculate heat index for more accurate fatigue detection
+      const t = temp;
+      const rh = humidity;
+      const hi = -8.784695 +
+        1.61139411 * t +
+        2.338549 * rh -
+        0.14611605 * t * rh -
+        0.012308094 * t * t -
+        0.016424828 * rh * rh +
+        0.002211732 * t * t * rh +
+        0.00072546 * t * rh * rh -
+        0.000003582 * t * t * rh * rh;
+      this.state.ambientTemp = Math.round(hi * 10) / 10;
+    } else {
+      this.state.ambientTemp = temp;
+    }
+  }
+  
+  // Update with weather data directly
+  updateWeatherData(data: { temperature: number; feelsLike: number; humidity: number }): void {
+    this.state.ambientTemp = data.feelsLike;
   }
   
   private updateFatigueScore(): void {
