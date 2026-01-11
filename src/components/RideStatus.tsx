@@ -1,15 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, MapPin, Clock, Activity } from 'lucide-react';
+import { Shield, MapPin, Clock, Activity, Thermometer, CloudRain, Wind } from 'lucide-react';
 import type { RiskEvent } from '@/lib/rideMonitor';
+import type { WeatherData } from '@/lib/weatherService';
 
 interface RideStatusProps {
   isActive: boolean;
   duration: number;
   lastEvent: RiskEvent | null;
   location: { lat: number; lng: number } | null;
+  weatherData?: WeatherData | null;
 }
 
-export function RideStatus({ isActive, duration, lastEvent, location }: RideStatusProps) {
+export function RideStatus({ isActive, duration, lastEvent, location, weatherData }: RideStatusProps) {
   const formatDuration = (seconds: number): string => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -40,8 +42,33 @@ export function RideStatus({ isActive, duration, lastEvent, location }: RideStat
       fall_detected: 'Fall Detected',
       long_idle: 'Idle Warning',
       wellness_check: 'Check-in',
+      rain_warning: 'Rain Alert',
+      extreme_weather: 'Extreme Weather',
+      high_wind: 'Wind Alert',
     };
     return labels[type] || type;
+  };
+
+  // Determine if weather should be shown (only when concerning)
+  const showWeather = weatherData && (
+    weatherData.feelsLike >= 35 || 
+    weatherData.isRaining || 
+    weatherData.windSpeed >= 30
+  );
+  
+  const getWeatherIcon = () => {
+    if (!weatherData) return null;
+    if (weatherData.isRaining) return <CloudRain className="w-4 h-4" />;
+    if (weatherData.windSpeed >= 30) return <Wind className="w-4 h-4" />;
+    return <Thermometer className="w-4 h-4" />;
+  };
+  
+  const getWeatherColor = () => {
+    if (!weatherData) return 'text-muted-foreground';
+    if (weatherData.feelsLike >= 45) return 'text-danger';
+    if (weatherData.feelsLike >= 40 || weatherData.isRaining) return 'text-warning';
+    if (weatherData.feelsLike >= 35 || weatherData.windSpeed >= 30) return 'text-primary';
+    return 'text-muted-foreground';
   };
 
   return (
@@ -78,6 +105,20 @@ export function RideStatus({ isActive, duration, lastEvent, location }: RideStat
                 <MapPin className="w-4 h-4" />
                 <span className="text-xs">GPS</span>
               </div>
+            )}
+            
+            {/* Weather indicator (only when concerning) */}
+            {showWeather && (
+              <motion.div 
+                className={`flex items-center gap-1 ${getWeatherColor()}`}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                {getWeatherIcon()}
+                <span className="text-xs font-medium">
+                  {Math.round(weatherData!.feelsLike)}°
+                </span>
+              </motion.div>
             )}
           </div>
           

@@ -14,6 +14,7 @@ import { SafetyMap } from '@/components/SafetyMap';
 import { ContextualSafetyActions } from '@/components/ContextualSafetyActions';
 import { rideMonitor, type RiskEvent } from '@/lib/rideMonitor';
 import { fatigueDetector } from '@/lib/fatigueDetection';
+import { weatherService, type WeatherData } from '@/lib/weatherService';
 import { calculateRideScore } from '@/lib/safetyCredits';
 import { initVoice, speak, vibrateConfirm } from '@/lib/voiceOutput';
 import { toast } from 'sonner';
@@ -42,6 +43,7 @@ const Index = () => {
   // Risk and fatigue tracking
   const [riskLevel, setRiskLevel] = useState<'none' | 'low' | 'medium' | 'high' | 'critical'>('none');
   const [fatigueLevel, setFatigueLevel] = useState<'none' | 'mild' | 'moderate' | 'severe'>('none');
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   
   // Metrics tracking for safety score
   const metricsRef = useRef({
@@ -49,7 +51,13 @@ const Index = () => {
     heatExposureMinutes: 0,
     warningsAcknowledged: 0,
     totalWarnings: 0,
+    harshWeatherMinutes: 0,
+    weatherAlertsHeeded: 0,
   });
+  
+  // Last weather alert time to avoid spam
+  const lastWeatherAlertRef = useRef<number>(0);
+  const hydrationReminderRef = useRef<number>(0);
   
   // Initialize voice system
   useEffect(() => {
@@ -70,7 +78,7 @@ const Index = () => {
     return () => clearInterval(timer);
   }, [isRideActive]);
   
-  // Update location and fatigue periodically
+  // Update location, fatigue, and weather periodically
   useEffect(() => {
     if (!isRideActive) return;
     
@@ -86,6 +94,74 @@ const Index = () => {
       // Get current speed for fatigue detector
       const state = rideMonitor.getState();
       fatigueDetector.updateGPSData(state.lastSpeed);
+      
+      // Check weather and update fatigue with temperature
+      const weather = weatherService.getCachedWeather();
+      if (weather) {
+        setWeatherData(weather);
+        fatigueDetector.updateWeatherData({
+          temperature: weather.temperature,
+          feelsLike: weather.feelsLike,
+          humidity: weather.humidity,
+        });
+        
+        // Track harsh weather exposure
+        if (weather.feelsLike >= 35 || weather.isRaining || weather.windSpeed >= 30) {
+          metricsRef.current.harshWeatherMinutes += 5 / 60; // 5 seconds increment
+        }
+        
+        // Weather-based alerts (with debounce)
+        const now = Date.now();
+        const weatherRisk = weatherService.getWeatherRisk(weather);
+        
+        if (weatherRisk.level !== 'none' && now - lastWeatherAlertRef.current > 10 * 60 * 1000) {
+          // 10 minute debounce between weather alerts
+          if (weatherRisk.level === 'extreme') {
+            speak('extreme_heat');
+            rideMonitor.triggerExtremeWeather({
+              temperature: weather.temperature,
+              feelsLike: weather.feelsLike,
+              humidity: weather.humidity,
+              windSpeed: weather.windSpeed,
+              isRaining: weather.isRaining,
+            });
+          } else if (weatherRisk.type === 'rain') {
+            speak('rain_warning');
+            rideMonitor.triggerRainWarning({
+              temperature: weather.temperature,
+              feelsLike: weather.feelsLike,
+              humidity: weather.humidity,
+              windSpeed: weather.windSpeed,
+              isRaining: weather.isRaining,
+            });
+          } else if (weatherRisk.type === 'wind') {
+            speak('high_wind');
+            rideMonitor.triggerWindWarning({
+              temperature: weather.temperature,
+              feelsLike: weather.feelsLike,
+              humidity: weather.humidity,
+              windSpeed: weather.windSpeed,
+              isRaining: weather.isRaining,
+            });
+          } else if (weatherRisk.level === 'danger' || weatherRisk.level === 'warning') {
+            speak('heat_warning');
+            rideMonitor.triggerHeatWarning({
+              temperature: weather.temperature,
+              feelsLike: weather.feelsLike,
+              humidity: weather.humidity,
+              windSpeed: weather.windSpeed,
+              isRaining: weather.isRaining,
+            });
+          }
+          lastWeatherAlertRef.current = now;
+        }
+        
+        // Hydration reminder every 30 min in heat
+        if (weather.feelsLike >= 32 && now - hydrationReminderRef.current > 30 * 60 * 1000) {
+          speak('hydration_reminder');
+          hydrationReminderRef.current = now;
+        }
+      }
     };
     
     const interval = setInterval(updateStatus, 5000);
@@ -177,7 +253,11 @@ const Index = () => {
       heatExposureMinutes: 0,
       warningsAcknowledged: 0,
       totalWarnings: 0,
+      harshWeatherMinutes: 0,
+      weatherAlertsHeeded: 0,
     };
+    lastWeatherAlertRef.current = 0;
+    hydrationReminderRef.current = 0;
     
     try {
       const success = await rideMonitor.startMonitoring();
@@ -188,6 +268,17 @@ const Index = () => {
         
         // Start fatigue detection
         fatigueDetector.startMonitoring();
+        
+        // Start weather monitoring
+        weatherService.startMonitoring(() => rideMonitor.getCurrentLocation());
+        weatherService.setWeatherUpdateHandler((data) => {
+          setWeatherData(data);
+          fatigueDetector.updateWeatherData({
+            temperature: data.temperature,
+            feelsLike: data.feelsLike,
+            humidity: data.humidity,
+          });
+        });
         
         const loc = rideMonitor.getCurrentLocation();
         const newSessionId = await startRideSession(loc || undefined);
@@ -215,10 +306,13 @@ const Index = () => {
     const fatigueState = fatigueDetector.stopMonitoring();
     const fatigueMetrics = fatigueDetector.getMetrics();
     
+    // Stop weather monitoring
+    weatherService.stopMonitoring();
+    
     if (sessionId) {
       await endRideSession(sessionId, finalState);
       
-      // Calculate and save safety score
+      // Calculate and save safety score with weather data
       const totalMinutes = duration / 60;
       const rideScore = calculateRideScore(sessionId, {
         accelerationVariance: fatigueMetrics.accelerationVariance,
@@ -227,6 +321,8 @@ const Index = () => {
         totalMinutes,
         warningsAcknowledged: metricsRef.current.warningsAcknowledged,
         totalWarnings: metricsRef.current.totalWarnings,
+        harshWeatherMinutes: metricsRef.current.harshWeatherMinutes,
+        weatherAlertsHeeded: metricsRef.current.weatherAlertsHeeded,
       });
       
       // Show score toast
@@ -239,6 +335,7 @@ const Index = () => {
     setLocation(null);
     setRiskLevel('none');
     setFatigueLevel('none');
+    setWeatherData(null);
     
     speak('ride_ended');
   };
@@ -300,6 +397,7 @@ const Index = () => {
           duration={duration}
           lastEvent={lastEvent}
           location={location}
+          weatherData={weatherData}
         />
         
         {/* Tagline (when not riding) */}
