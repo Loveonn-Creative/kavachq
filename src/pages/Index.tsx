@@ -116,7 +116,21 @@ const Index = () => {
         
         if (weatherRisk.level !== 'none' && now - lastWeatherAlertRef.current > 10 * 60 * 1000) {
           // 10 minute debounce between weather alerts
-          if (weatherRisk.level === 'extreme') {
+          if (weatherRisk.type === 'aqi') {
+            // AQI-specific alerts
+            const aqi = weather.aqi ?? 0;
+            if (aqi > 300) {
+              speak('aqi_hazardous');
+            } else if (aqi > 200) {
+              speak('aqi_very_unhealthy');
+            } else if (aqi > 150) {
+              speak('aqi_unhealthy');
+            } else if (aqi > 100) {
+              speak('aqi_sensitive');
+            }
+            metricsRef.current.weatherAlertsHeeded++;
+            lastWeatherAlertRef.current = now;
+          } else if (weatherRisk.level === 'extreme') {
             speak('extreme_heat');
             rideMonitor.triggerExtremeWeather({
               temperature: weather.temperature,
@@ -125,6 +139,7 @@ const Index = () => {
               windSpeed: weather.windSpeed,
               isRaining: weather.isRaining,
             });
+            lastWeatherAlertRef.current = now;
           } else if (weatherRisk.type === 'rain') {
             speak('rain_warning');
             rideMonitor.triggerRainWarning({
@@ -134,6 +149,7 @@ const Index = () => {
               windSpeed: weather.windSpeed,
               isRaining: weather.isRaining,
             });
+            lastWeatherAlertRef.current = now;
           } else if (weatherRisk.type === 'wind') {
             speak('high_wind');
             rideMonitor.triggerWindWarning({
@@ -143,6 +159,7 @@ const Index = () => {
               windSpeed: weather.windSpeed,
               isRaining: weather.isRaining,
             });
+            lastWeatherAlertRef.current = now;
           } else if (weatherRisk.level === 'danger' || weatherRisk.level === 'warning') {
             speak('heat_warning');
             rideMonitor.triggerHeatWarning({
@@ -152,8 +169,8 @@ const Index = () => {
               windSpeed: weather.windSpeed,
               isRaining: weather.isRaining,
             });
+            lastWeatherAlertRef.current = now;
           }
-          lastWeatherAlertRef.current = now;
         }
         
         // Hydration reminder every 30 min in heat

@@ -24,6 +24,11 @@ const voiceMessages: Record<string, Record<string, string>> = {
     high_wind: 'Strong winds ahead. Hold steady. Stay alert.',
     hydration_reminder: 'Time to drink water. Stay hydrated.',
     weather_caution: 'Warm conditions. Take breaks and hydrate.',
+    // AQI alerts
+    aqi_hazardous: 'Hazardous air quality. Stop and find shelter immediately.',
+    aqi_very_unhealthy: 'Very unhealthy air. Limit outdoor riding.',
+    aqi_unhealthy: 'Unhealthy air quality. Take breaks indoors.',
+    aqi_sensitive: 'Air quality alert. Rest if you feel unwell.',
   },
   'hi-IN': {
     ride_started: 'राइड शुरू। मैं आपकी निगरानी कर रहा हूं।',
@@ -44,6 +49,11 @@ const voiceMessages: Record<string, Record<string, string>> = {
     high_wind: 'तेज़ हवाएं। स्थिर रहें। सतर्क रहें।',
     hydration_reminder: 'पानी पीने का समय। हाइड्रेटेड रहें।',
     weather_caution: 'गर्म मौसम। ब्रेक लें और पानी पिएं।',
+    // AQI alerts
+    aqi_hazardous: 'खतरनाक हवा। तुरंत रुकें और छत के नीचे जाएं।',
+    aqi_very_unhealthy: 'बहुत खराब हवा। बाहर कम निकलें।',
+    aqi_unhealthy: 'खराब हवा। अंदर आराम करें।',
+    aqi_sensitive: 'हवा की चेतावनी। तबियत खराब लगे तो आराम करें।',
   },
   'ta-IN': {
     ride_started: 'பயணம் தொடங்கியது. நான் உங்களை கவனித்துக்கொள்கிறேன்.',
@@ -64,6 +74,11 @@ const voiceMessages: Record<string, Record<string, string>> = {
     high_wind: 'கடும் காற்று. நிலையாக இருங்கள். விழிப்பாக இருங்கள்.',
     hydration_reminder: 'தண்ணீர் குடிக்க நேரம். நீரேற்றமாக இருங்கள்.',
     weather_caution: 'வெப்பமான நிலை. இடைவேளை எடுங்கள்.',
+    // AQI alerts
+    aqi_hazardous: 'ஆபத்தான காற்று. உடனே நிறுத்தி உள்ளே செல்லுங்கள்.',
+    aqi_very_unhealthy: 'மிகவும் மோசமான காற்று. வெளியே குறைவாக இருங்கள்.',
+    aqi_unhealthy: 'மோசமான காற்று. உள்ளே ஓய்வெடுங்கள்.',
+    aqi_sensitive: 'காற்று எச்சரிக்கை. உடல்நிலை சரியில்லாவிட்டால் ஓய்வெடுங்கள்.',
   },
 };
 
