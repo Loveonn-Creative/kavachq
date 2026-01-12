@@ -15,11 +15,23 @@ export interface WeatherData {
   isRaining: boolean;
   lastUpdated: number; // Timestamp
   location: { lat: number; lng: number };
+  // AQI data
+  aqi: number | null; // US EPA AQI (0-500+)
+  pm25: number | null; // PM2.5 µg/m³
+  pm10: number | null; // PM10 µg/m³
 }
 
 export interface WeatherRisk {
   level: 'none' | 'caution' | 'warning' | 'danger' | 'extreme';
-  type: 'heat' | 'rain' | 'wind' | 'uv' | 'none';
+  type: 'heat' | 'rain' | 'wind' | 'uv' | 'aqi' | 'none';
+  message: string;
+}
+
+// AQI breakpoints (US EPA standard)
+// 0-50: Good, 51-100: Moderate, 101-150: Unhealthy for Sensitive, 
+// 151-200: Unhealthy, 201-300: Very Unhealthy, 301+: Hazardous
+export interface AQIRisk {
+  level: 'good' | 'moderate' | 'sensitive' | 'unhealthy' | 'very_unhealthy' | 'hazardous';
   message: string;
 }
 
@@ -121,18 +133,40 @@ class WeatherService {
   
   private async doFetch(lat: number, lng: number): Promise<WeatherData | null> {
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?` +
+      // Fetch weather and AQI in parallel
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?` +
         `latitude=${lat}&longitude=${lng}&` +
         `current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code,uv_index`;
       
-      const response = await fetch(url, { 
-        signal: AbortSignal.timeout(5000) // 5 second timeout
-      });
+      const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?` +
+        `latitude=${lat}&longitude=${lng}&` +
+        `current=us_aqi,pm2_5,pm10`;
       
-      if (!response.ok) throw new Error('Weather fetch failed');
+      const [weatherResponse, aqiResponse] = await Promise.all([
+        fetch(weatherUrl, { signal: AbortSignal.timeout(5000) }),
+        fetch(aqiUrl, { signal: AbortSignal.timeout(5000) }).catch(() => null),
+      ]);
       
-      const data = await response.json();
-      const current = data.current;
+      if (!weatherResponse.ok) throw new Error('Weather fetch failed');
+      
+      const weatherData = await weatherResponse.json();
+      const current = weatherData.current;
+      
+      // Parse AQI data (may be null if API fails)
+      let aqi: number | null = null;
+      let pm25: number | null = null;
+      let pm10: number | null = null;
+      
+      if (aqiResponse?.ok) {
+        try {
+          const aqiData = await aqiResponse.json();
+          aqi = aqiData.current?.us_aqi ?? null;
+          pm25 = aqiData.current?.pm2_5 ?? null;
+          pm10 = aqiData.current?.pm10 ?? null;
+        } catch {
+          // AQI parsing failed, continue with null values
+        }
+      }
       
       const temperature = current.temperature_2m;
       const humidity = current.relative_humidity_2m;
@@ -140,7 +174,7 @@ class WeatherService {
       const weatherCode = current.weather_code;
       const uvIndex = current.uv_index || 0;
       
-      const weatherData: WeatherData = {
+      const result: WeatherData = {
         temperature,
         humidity,
         feelsLike: this.calculateHeatIndex(temperature, humidity),
@@ -150,14 +184,17 @@ class WeatherService {
         isRaining: RAIN_CODES.includes(weatherCode),
         lastUpdated: Date.now(),
         location: { lat, lng },
+        aqi,
+        pm25,
+        pm10,
       };
       
-      this.cachedData = weatherData;
+      this.cachedData = result;
       this.lastFetchLocation = { lat, lng };
-      this.saveToCache(weatherData);
-      this.onWeatherUpdate?.(weatherData);
+      this.saveToCache(result);
+      this.onWeatherUpdate?.(result);
       
-      return weatherData;
+      return result;
     } catch (error) {
       console.warn('Weather fetch failed, using cache:', error);
       // Return stale cache if available
@@ -171,14 +208,32 @@ class WeatherService {
       return { level: 'none', type: 'none', message: '' };
     }
     
-    const { feelsLike, windSpeed, isRaining, uvIndex } = data;
+    const { feelsLike, windSpeed, isRaining, uvIndex, aqi } = data;
     
-    // Extreme heat (highest priority)
+    // Hazardous AQI (highest priority - immediate health risk)
+    if (aqi !== null && aqi > 300) {
+      return {
+        level: 'extreme',
+        type: 'aqi',
+        message: 'Hazardous air. Stop immediately. Find shelter.',
+      };
+    }
+    
+    // Extreme heat
     if (feelsLike >= 45) {
       return {
         level: 'extreme',
         type: 'heat',
         message: 'Extreme heat. Stop immediately. Find shade and water.',
+      };
+    }
+    
+    // Very unhealthy AQI
+    if (aqi !== null && aqi > 200) {
+      return {
+        level: 'danger',
+        type: 'aqi',
+        message: 'Very unhealthy air. Limit outdoor exposure.',
       };
     }
     
@@ -188,6 +243,15 @@ class WeatherService {
         level: 'danger',
         type: 'heat',
         message: 'Dangerous heat. Stop for rest and water.',
+      };
+    }
+    
+    // Unhealthy AQI
+    if (aqi !== null && aqi > 150) {
+      return {
+        level: 'warning',
+        type: 'aqi',
+        message: 'Unhealthy air quality. Take breaks indoors.',
       };
     }
     
@@ -218,6 +282,15 @@ class WeatherService {
       };
     }
     
+    // Sensitive groups AQI
+    if (aqi !== null && aqi > 100) {
+      return {
+        level: 'caution',
+        type: 'aqi',
+        message: 'Air quality concern. Sensitive groups should rest.',
+      };
+    }
+    
     // UV warning (mid-day riding)
     if (uvIndex >= 8) {
       return {
@@ -237,6 +310,30 @@ class WeatherService {
     }
     
     return { level: 'none', type: 'none', message: '' };
+  }
+  
+  // Get specific AQI risk assessment
+  getAQIRisk(data: WeatherData | null): AQIRisk | null {
+    if (!data || data.aqi === null) return null;
+    
+    const aqi = data.aqi;
+    
+    if (aqi <= 50) {
+      return { level: 'good', message: 'Good air quality' };
+    }
+    if (aqi <= 100) {
+      return { level: 'moderate', message: 'Moderate air quality' };
+    }
+    if (aqi <= 150) {
+      return { level: 'sensitive', message: 'Unhealthy for sensitive groups' };
+    }
+    if (aqi <= 200) {
+      return { level: 'unhealthy', message: 'Unhealthy air quality' };
+    }
+    if (aqi <= 300) {
+      return { level: 'very_unhealthy', message: 'Very unhealthy air' };
+    }
+    return { level: 'hazardous', message: 'Hazardous air quality' };
   }
   
   // Start periodic weather monitoring

@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, MapPin, Clock, Activity, Thermometer, CloudRain, Wind } from 'lucide-react';
+import { Shield, MapPin, Clock, Activity, Thermometer, CloudRain, Wind, CloudFog } from 'lucide-react';
 import type { RiskEvent } from '@/lib/rideMonitor';
 import type { WeatherData } from '@/lib/weatherService';
+import { weatherService } from '@/lib/weatherService';
 
 interface RideStatusProps {
   isActive: boolean;
@@ -45,9 +46,14 @@ export function RideStatus({ isActive, duration, lastEvent, location, weatherDat
       rain_warning: 'Rain Alert',
       extreme_weather: 'Extreme Weather',
       high_wind: 'Wind Alert',
+      aqi_warning: 'Air Quality Alert',
     };
     return labels[type] || type;
   };
+
+  // Get AQI risk info
+  const aqiRisk = weatherService.getAQIRisk(weatherData ?? null);
+  const showAQI = aqiRisk && aqiRisk.level !== 'good' && aqiRisk.level !== 'moderate';
 
   // Determine if weather should be shown (only when concerning)
   const showWeather = weatherData && (
@@ -69,6 +75,17 @@ export function RideStatus({ isActive, duration, lastEvent, location, weatherDat
     if (weatherData.feelsLike >= 40 || weatherData.isRaining) return 'text-warning';
     if (weatherData.feelsLike >= 35 || weatherData.windSpeed >= 30) return 'text-primary';
     return 'text-muted-foreground';
+  };
+  
+  const getAQIColor = () => {
+    if (!aqiRisk) return 'text-muted-foreground';
+    switch (aqiRisk.level) {
+      case 'hazardous': return 'text-danger';
+      case 'very_unhealthy': return 'text-danger';
+      case 'unhealthy': return 'text-warning';
+      case 'sensitive': return 'text-primary';
+      default: return 'text-muted-foreground';
+    }
   };
 
   return (
@@ -117,6 +134,21 @@ export function RideStatus({ isActive, duration, lastEvent, location, weatherDat
                 {getWeatherIcon()}
                 <span className="text-xs font-medium">
                   {Math.round(weatherData!.feelsLike)}°
+                </span>
+              </motion.div>
+            )}
+            
+            {/* AQI indicator (only when concerning) */}
+            {showAQI && weatherData?.aqi && (
+              <motion.div 
+                className={`flex items-center gap-1 ${getAQIColor()}`}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                title={aqiRisk?.message}
+              >
+                <CloudFog className="w-4 h-4" />
+                <span className="text-xs font-medium">
+                  AQI {weatherData.aqi}
                 </span>
               </motion.div>
             )}
