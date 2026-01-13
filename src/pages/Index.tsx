@@ -574,9 +574,6 @@ const Index = () => {
           setPendingConfirmation(null);
         }}
       />
-        onCancel={handleCancelEmergency}
-        onResolve={handleResolveEmergency}
-      />
       
       {/* Demo Controls */}
       <DemoControls
