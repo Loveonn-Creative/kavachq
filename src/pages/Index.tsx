@@ -12,11 +12,14 @@ import { EmergencyContactsSheet } from '@/components/EmergencyContactsSheet';
 import { VoiceChat } from '@/components/VoiceChat';
 import { SafetyMap } from '@/components/SafetyMap';
 import { ContextualSafetyActions } from '@/components/ContextualSafetyActions';
+import { VoiceConfirmationOverlay } from '@/components/VoiceConfirmationOverlay';
 import { rideMonitor, type RiskEvent } from '@/lib/rideMonitor';
 import { fatigueDetector } from '@/lib/fatigueDetection';
 import { weatherService, type WeatherData } from '@/lib/weatherService';
 import { calculateRideScore } from '@/lib/safetyCredits';
 import { initVoice, speak, vibrateConfirm } from '@/lib/voiceOutput';
+import { calculateConfidence, getConfidenceAction, type ScoredRiskEvent } from '@/lib/confidenceScoring';
+import { recordFalseAlarm, recordTrueAlert, loadMemoriesFromCloud } from '@/lib/locationMemory';
 import { toast } from 'sonner';
 import { 
   startRideSession, 
@@ -40,6 +43,9 @@ const Index = () => {
   const [showVoiceChat, setShowVoiceChat] = useState(false);
   const [showMap, setShowMap] = useState(false);
   
+  // Voice confirmation state
+  const [pendingConfirmation, setPendingConfirmation] = useState<ScoredRiskEvent | null>(null);
+  
   // Risk and fatigue tracking
   const [riskLevel, setRiskLevel] = useState<'none' | 'low' | 'medium' | 'high' | 'critical'>('none');
   const [fatigueLevel, setFatigueLevel] = useState<'none' | 'mild' | 'moderate' | 'severe'>('none');
@@ -59,9 +65,10 @@ const Index = () => {
   const lastWeatherAlertRef = useRef<number>(0);
   const hydrationReminderRef = useRef<number>(0);
   
-  // Initialize voice system
+  // Initialize voice system and load location memories
   useEffect(() => {
     initVoice();
+    loadMemoriesFromCloud();
   }, []);
   
   // Duration timer
@@ -187,8 +194,36 @@ const Index = () => {
     return () => clearInterval(interval);
   }, [isRideActive]);
   
-  // Handle risk events
+  // Handle risk events with confidence scoring
   const handleRiskEvent = useCallback((event: RiskEvent) => {
+    const state = rideMonitor.getState();
+    
+    // Calculate confidence score
+    const scoredEvent = calculateConfidence(event, {
+      currentSpeed: state.lastSpeed,
+      accelerationVariance: 0,
+      rideStartTime: state.startTime || Date.now(),
+      recentEvents: state.riskEvents,
+    });
+    
+    const action = getConfidenceAction(scoredEvent.confidence);
+    
+    // Log for debugging
+    console.log(`Risk event: ${event.type}, confidence: ${scoredEvent.confidence}%, action: ${action}`);
+    
+    if (action === 'suppress') {
+      // Silently log, don't alert
+      console.log('Alert suppressed due to low confidence');
+      return;
+    }
+    
+    if (action === 'confirm' && scoredEvent.requiresConfirmation) {
+      // Show voice confirmation overlay
+      setPendingConfirmation(scoredEvent);
+      return;
+    }
+    
+    // For 'alert' or 'emergency' actions, proceed with normal flow
     setLastEvent(event);
     if (sessionId) {
       saveRiskEvent(sessionId, event);
@@ -200,7 +235,7 @@ const Index = () => {
       metricsRef.current.speedViolations++;
     }
     if (event.type === 'heat_warning') {
-      metricsRef.current.heatExposureMinutes += 5; // Approximate exposure
+      metricsRef.current.heatExposureMinutes += 5;
     }
     
     // Set risk level based on severity
@@ -217,7 +252,44 @@ const Index = () => {
     setTimeout(() => {
       setLastEvent(prev => prev?.timestamp === event.timestamp ? null : prev);
     }, 5000);
+    
+    // Auto-trigger emergency for high-confidence critical events
+    if (action === 'emergency' && event.type === 'fall_detected') {
+      setTimeout(() => handleEmergency(), 3000);
+    }
   }, [sessionId]);
+  
+  // Handle voice confirmation result
+  const handleConfirmationResult = useCallback((result: 'ok' | 'danger' | 'timeout' | 'cancelled', responseTimeMs: number) => {
+    const event = pendingConfirmation;
+    setPendingConfirmation(null);
+    
+    if (!event) return;
+    
+    if (result === 'ok' || result === 'cancelled') {
+      // Record false alarm at this location
+      if (event.location) {
+        recordFalseAlarm(event.location.lat, event.location.lng, {
+          eventType: event.type,
+        });
+      }
+      speak('alert_suppressed');
+      metricsRef.current.warningsAcknowledged++;
+      toast.info('Learning from this location');
+    } else if (result === 'danger') {
+      // Record true alert and escalate
+      if (event.location) {
+        recordTrueAlert(event.location.lat, event.location.lng);
+      }
+      handleEmergency();
+    } else if (result === 'timeout') {
+      // No response = assume danger
+      if (event.location) {
+        recordTrueAlert(event.location.lat, event.location.lng);
+      }
+      handleEmergency();
+    }
+  }, [pendingConfirmation]);
   
   // Handle emergency trigger
   const handleEmergency = useCallback(async () => {
@@ -485,6 +557,23 @@ const Index = () => {
       <EmergencyOverlay
         isActive={isEmergencyActive}
         location={location}
+        onCancel={handleCancelEmergency}
+        onResolve={handleResolveEmergency}
+      />
+      
+      {/* Voice Confirmation Overlay */}
+      <VoiceConfirmationOverlay
+        isVisible={!!pendingConfirmation}
+        eventType={pendingConfirmation?.type || ''}
+        confidence={pendingConfirmation?.confidence || 0}
+        onResult={handleConfirmationResult}
+        onCancel={() => {
+          if (pendingConfirmation?.location) {
+            recordFalseAlarm(pendingConfirmation.location.lat, pendingConfirmation.location.lng);
+          }
+          setPendingConfirmation(null);
+        }}
+      />
         onCancel={handleCancelEmergency}
         onResolve={handleResolveEmergency}
       />
