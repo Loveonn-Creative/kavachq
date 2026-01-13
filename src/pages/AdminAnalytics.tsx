@@ -11,10 +11,15 @@ import {
   MapPin,
   Users,
   Activity,
-  Brain
+  Brain,
+  Target,
+  Mic
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SmartAlertMetrics } from '@/components/admin/SmartAlertMetrics';
+import { LocationMemoryMap } from '@/components/admin/LocationMemoryMap';
 
 interface AnalyticsData {
   totalRides: number;
@@ -191,125 +196,156 @@ export default function AdminAnalytics() {
         </div>
       </header>
       
-      <main className="p-4 space-y-6 pb-8">
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Activity className="w-8 h-8 animate-pulse text-muted-foreground" />
-          </div>
-        ) : data ? (
-          <>
-            {/* Overview Cards */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-card border border-border rounded-xl p-4">
-                <Users className="w-5 h-5 text-blue-500 mb-2" />
-                <p className="text-2xl font-bold">{data.totalRides}</p>
-                <p className="text-xs text-muted-foreground">Total Rides</p>
+      <main className="p-4 space-y-4 pb-8">
+        {/* Tab Navigation */}
+        <Tabs defaultValue="smart-alerts" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="smart-alerts" className="text-xs">
+              <Target className="w-3 h-3 mr-1" />
+              Smart Alerts
+            </TabsTrigger>
+            <TabsTrigger value="locations" className="text-xs">
+              <MapPin className="w-3 h-3 mr-1" />
+              Locations
+            </TabsTrigger>
+            <TabsTrigger value="patterns" className="text-xs">
+              <Brain className="w-3 h-3 mr-1" />
+              Patterns
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Smart Alerts Tab */}
+          <TabsContent value="smart-alerts" className="space-y-4">
+            <SmartAlertMetrics />
+          </TabsContent>
+
+          {/* Locations Tab */}
+          <TabsContent value="locations" className="space-y-4">
+            <LocationMemoryMap />
+          </TabsContent>
+
+          {/* Patterns Tab - Original Content */}
+          <TabsContent value="patterns" className="space-y-6">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Activity className="w-8 h-8 animate-pulse text-muted-foreground" />
               </div>
-              <div className="bg-card border border-border rounded-xl p-4">
-                <AlertTriangle className="w-5 h-5 text-orange-500 mb-2" />
-                <p className="text-2xl font-bold">{data.totalRiskEvents}</p>
-                <p className="text-xs text-muted-foreground">Risk Events</p>
-              </div>
-              <div className="bg-card border border-border rounded-xl p-4">
-                <Activity className="w-5 h-5 text-red-500 mb-2" />
-                <p className="text-2xl font-bold">{data.emergencyEvents}</p>
-                <p className="text-xs text-muted-foreground">Emergencies</p>
-              </div>
-              <div className="bg-card border border-border rounded-xl p-4">
-                <Clock className="w-5 h-5 text-green-500 mb-2" />
-                <p className="text-2xl font-bold">{data.avgRideDuration}m</p>
-                <p className="text-xs text-muted-foreground">Avg Duration</p>
-              </div>
-            </div>
-            
-            {/* Risk Event Distribution */}
-            <section className="space-y-3">
-              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                Risk Event Types
-              </h2>
-              <div className="bg-card border border-border rounded-xl p-4 space-y-3">
-                {Object.entries(data.riskEventsByType).map(([type, count]) => {
-                  const percentage = Math.round((count / data.totalRiskEvents) * 100) || 0;
-                  return (
-                    <div key={type} className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="capitalize">{type.replace('_', ' ')}</span>
-                        <span className="text-muted-foreground">{count} ({percentage}%)</span>
-                      </div>
-                      <Progress value={percentage} className="h-2" />
-                    </div>
-                  );
-                })}
-                {Object.keys(data.riskEventsByType).length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No risk events recorded yet
-                  </p>
-                )}
-              </div>
-            </section>
-            
-            {/* AI Pattern Detection */}
-            <section className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                <Brain className="w-4 h-4" />
-                <span>AI Pattern Detection</span>
-              </div>
-              
-              {data.recentPatterns.length > 0 ? (
-                <div className="space-y-3">
-                  {data.recentPatterns.map((pattern) => (
-                    <div 
-                      key={pattern.id}
-                      className={`border rounded-xl p-4 space-y-3 ${getPatternColor(pattern.type)}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        {getPatternIcon(pattern.type)}
-                        <div className="flex-1">
-                          <p className="font-medium capitalize">{pattern.type.replace('_', ' ')}</p>
-                          <p className="text-sm text-muted-foreground">{pattern.description}</p>
-                        </div>
-                        <span className="text-sm font-medium">{pattern.frequency}%</span>
-                      </div>
-                      
-                      <div className="pl-8 space-y-2 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Prediction: </span>
-                          <span>{pattern.prediction}</span>
-                        </div>
-                        <div className="bg-background/50 rounded-lg p-2">
-                          <span className="text-muted-foreground">Recommended: </span>
-                          <span className="text-primary">{pattern.intervention}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+            ) : data ? (
+              <>
+                {/* Overview Cards */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-card border border-border rounded-xl p-4">
+                    <Users className="w-5 h-5 text-primary mb-2" />
+                    <p className="text-2xl font-bold">{data.totalRides}</p>
+                    <p className="text-xs text-muted-foreground">Total Rides</p>
+                  </div>
+                  <div className="bg-card border border-border rounded-xl p-4">
+                    <AlertTriangle className="w-5 h-5 text-warning mb-2" />
+                    <p className="text-2xl font-bold">{data.totalRiskEvents}</p>
+                    <p className="text-xs text-muted-foreground">Risk Events</p>
+                  </div>
+                  <div className="bg-card border border-border rounded-xl p-4">
+                    <Activity className="w-5 h-5 text-danger mb-2" />
+                    <p className="text-2xl font-bold">{data.emergencyEvents}</p>
+                    <p className="text-xs text-muted-foreground">Emergencies</p>
+                  </div>
+                  <div className="bg-card border border-border rounded-xl p-4">
+                    <Clock className="w-5 h-5 text-safe mb-2" />
+                    <p className="text-2xl font-bold">{data.avgRideDuration}m</p>
+                    <p className="text-xs text-muted-foreground">Avg Duration</p>
+                  </div>
                 </div>
-              ) : (
-                <div className="bg-card border border-border rounded-xl p-8 text-center">
-                  <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="font-medium">Learning...</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    AI needs more ride data to detect patterns
+                
+                {/* Risk Event Distribution */}
+                <section className="space-y-3">
+                  <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    Risk Event Types
+                  </h2>
+                  <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+                    {Object.entries(data.riskEventsByType).map(([type, count]) => {
+                      const percentage = Math.round((count / data.totalRiskEvents) * 100) || 0;
+                      return (
+                        <div key={type} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="capitalize">{type.replace('_', ' ')}</span>
+                            <span className="text-muted-foreground">{count} ({percentage}%)</span>
+                          </div>
+                          <Progress value={percentage} className="h-2" />
+                        </div>
+                      );
+                    })}
+                    {Object.keys(data.riskEventsByType).length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No risk events recorded yet
+                      </p>
+                    )}
+                  </div>
+                </section>
+                
+                {/* AI Pattern Detection */}
+                <section className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    <Brain className="w-4 h-4" />
+                    <span>AI Pattern Detection</span>
+                  </div>
+                  
+                  {data.recentPatterns.length > 0 ? (
+                    <div className="space-y-3">
+                      {data.recentPatterns.map((pattern) => (
+                        <div 
+                          key={pattern.id}
+                          className={`border rounded-xl p-4 space-y-3 ${getPatternColor(pattern.type)}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {getPatternIcon(pattern.type)}
+                            <div className="flex-1">
+                              <p className="font-medium capitalize">{pattern.type.replace('_', ' ')}</p>
+                              <p className="text-sm text-muted-foreground">{pattern.description}</p>
+                            </div>
+                            <span className="text-sm font-medium">{pattern.frequency}%</span>
+                          </div>
+                          
+                          <div className="pl-8 space-y-2 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Prediction: </span>
+                              <span>{pattern.prediction}</span>
+                            </div>
+                            <div className="bg-background/50 rounded-lg p-2">
+                              <span className="text-muted-foreground">Recommended: </span>
+                              <span className="text-primary">{pattern.intervention}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-card border border-border rounded-xl p-8 text-center">
+                      <Brain className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="font-medium">Learning...</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        AI needs more ride data to detect patterns
+                      </p>
+                    </div>
+                  )}
+                </section>
+                
+                {/* Objective */}
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-center">
+                  <p className="text-sm font-medium text-primary">
+                    🎯 One Objective: Prevent accidents before they happen
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    AI continuously learns from rider patterns to intervene early
                   </p>
                 </div>
-              )}
-            </section>
-            
-            {/* Objective */}
-            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-center">
-              <p className="text-sm font-medium text-primary">
-                🎯 One Objective: Prevent accidents before they happen
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                AI continuously learns from rider patterns to intervene early
-              </p>
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-20">
-            <p className="text-muted-foreground">Failed to load analytics</p>
-          </div>
-        )}
+              </>
+            ) : (
+              <div className="text-center py-20">
+                <p className="text-muted-foreground">Failed to load analytics</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
