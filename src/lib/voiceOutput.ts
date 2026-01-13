@@ -29,6 +29,10 @@ const voiceMessages: Record<string, Record<string, string>> = {
     aqi_very_unhealthy: 'Very unhealthy air. Limit outdoor riding.',
     aqi_unhealthy: 'Unhealthy air quality. Take breaks indoors.',
     aqi_sensitive: 'Air quality alert. Rest if you feel unwell.',
+    // Voice confirmation
+    are_you_okay: 'Are you okay?',
+    alert_suppressed: 'False alarm recorded. Learning from this location.',
+    danger_confirmed: 'Help is coming. Stay where you are.',
   },
   'hi-IN': {
     ride_started: 'राइड शुरू। मैं आपकी निगरानी कर रहा हूं।',
@@ -54,6 +58,10 @@ const voiceMessages: Record<string, Record<string, string>> = {
     aqi_very_unhealthy: 'बहुत खराब हवा। बाहर कम निकलें।',
     aqi_unhealthy: 'खराब हवा। अंदर आराम करें।',
     aqi_sensitive: 'हवा की चेतावनी। तबियत खराब लगे तो आराम करें।',
+    // Voice confirmation
+    are_you_okay: 'क्या आप ठीक हैं?',
+    alert_suppressed: 'गलत अलार्म दर्ज। इस जगह से सीख रहा हूं।',
+    danger_confirmed: 'मदद आ रही है। वहीं रहें।',
   },
   'ta-IN': {
     ride_started: 'பயணம் தொடங்கியது. நான் உங்களை கவனித்துக்கொள்கிறேன்.',
@@ -79,6 +87,10 @@ const voiceMessages: Record<string, Record<string, string>> = {
     aqi_very_unhealthy: 'மிகவும் மோசமான காற்று. வெளியே குறைவாக இருங்கள்.',
     aqi_unhealthy: 'மோசமான காற்று. உள்ளே ஓய்வெடுங்கள்.',
     aqi_sensitive: 'காற்று எச்சரிக்கை. உடல்நிலை சரியில்லாவிட்டால் ஓய்வெடுங்கள்.',
+    // Voice confirmation
+    are_you_okay: 'நீங்கள் நன்றாக இருக்கிறீர்களா?',
+    alert_suppressed: 'தவறான எச்சரிக்கை பதிவு செய்யப்பட்டது.',
+    danger_confirmed: 'உதவி வருகிறது. அங்கேயே இருங்கள்.',
   },
 };
 

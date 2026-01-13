@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_confirmations: {
+        Row: {
+          confirmation: string | null
+          created_at: string | null
+          device_id: string
+          event_type: string
+          id: string
+          initial_confidence: number | null
+          location_cell: string | null
+          response_time_ms: number | null
+          ride_session_id: string | null
+          sensor_data: Json | null
+        }
+        Insert: {
+          confirmation?: string | null
+          created_at?: string | null
+          device_id: string
+          event_type: string
+          id?: string
+          initial_confidence?: number | null
+          location_cell?: string | null
+          response_time_ms?: number | null
+          ride_session_id?: string | null
+          sensor_data?: Json | null
+        }
+        Update: {
+          confirmation?: string | null
+          created_at?: string | null
+          device_id?: string
+          event_type?: string
+          id?: string
+          initial_confidence?: number | null
+          location_cell?: string | null
+          response_time_ms?: number | null
+          ride_session_id?: string | null
+          sensor_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_confirmations_ride_session_id_fkey"
+            columns: ["ride_session_id"]
+            isOneToOne: false
+            referencedRelation: "ride_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emergency_contacts: {
         Row: {
           created_at: string
@@ -90,6 +137,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      location_memories: {
+        Row: {
+          cell_id: string
+          created_at: string | null
+          device_id: string
+          false_alarm_count: number | null
+          id: string
+          sensor_signature: Json | null
+          true_alarm_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          cell_id: string
+          created_at?: string | null
+          device_id: string
+          false_alarm_count?: number | null
+          id?: string
+          sensor_signature?: Json | null
+          true_alarm_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          cell_id?: string
+          created_at?: string | null
+          device_id?: string
+          false_alarm_count?: number | null
+          id?: string
+          sensor_signature?: Json | null
+          true_alarm_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       rest_stops: {
         Row: {
